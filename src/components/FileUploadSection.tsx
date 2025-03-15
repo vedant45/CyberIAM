@@ -2,8 +2,10 @@
 
 import { FileUpload, FileUploadRef } from '@/components/ui/file-upload';
 import { useState, useEffect, useRef } from 'react';
+import { useUser } from "@clerk/nextjs";
 
 export default function FileUploadSection() {
+  const { user } = useUser();
   const [uploadStatus, setUploadStatus] = useState<{
     status: 'idle' | 'uploading' | 'success' | 'error';
     message: string;
@@ -38,7 +40,11 @@ export default function FileUploadSection() {
       const formData = new FormData();
       formData.append('file', files[0]);
 
-      const response = await fetch('/api/upload', {
+      if (!user?.firstName) {
+        throw new Error('User not authenticated');
+      }
+
+      const response = await fetch(`/api/upload?db=${encodeURIComponent(user.firstName)}`, {
         method: 'POST',
         body: formData,
       });

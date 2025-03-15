@@ -6,6 +6,8 @@ import { CsvViewerModal } from './CsvViewerModal';
 import { ErrorNotification } from './ErrorNotification';
 import { LoadingSpinner } from './ui/loading-spinner';
 import { useMongoDBContext } from '@/contexts/MongoDBContext';
+import { useUser } from "@clerk/nextjs";
+
 
 interface FileData {
   _id: string;
@@ -22,6 +24,7 @@ interface ErrorMessage {
 
 export default function DataTable() {
   const { isConnected, isInitialized } = useMongoDBContext();
+  const { user } = useUser();
   const [data, setData] = useState<FileData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [countdown, setCountdown] = useState(10);
@@ -48,16 +51,16 @@ export default function DataTable() {
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!isConnected) {
+    if (!isConnected || !user?.firstName) {
       setData([]);
       return;
     }
 
     try {
       setIsLoading(true);
-      const response = await fetch('/api/mongodb');
+      const response = await fetch(`/api/mongodb?db=${encodeURIComponent(user.firstName)}`);
       const result = await response.json();
-      
+      console.log(result);
       // Update data while preserving pagination if possible
       const newData = result.data || [];
       const newTotalPages = Math.ceil(newData.length / ITEMS_PER_PAGE);
@@ -153,7 +156,7 @@ export default function DataTable() {
   };
 
   const filteredData = data.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    item?.name ? item.name.toLowerCase().includes(searchTerm.toLowerCase()) : false
   );
 
   const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);

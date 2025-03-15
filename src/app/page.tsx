@@ -2,7 +2,6 @@
 
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs";
 import { useUser } from "@clerk/nextjs";
-import FileUploadSection from "@/components/FileUploadSection";
 import DataTable from "@/components/DataTable";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 
@@ -19,13 +18,6 @@ export default function Home() {
       <SignedIn>
         <AuthenticatedLayout>
           <div className="flex flex-col lg:flex-row gap-8 justify-center items-start">
-            <div className="w-full lg:w-96">
-              <FileUploadSection />
-            </div>
-
-            {/* White Divider - Only visible on large screens */}
-            <div className="hidden lg:block h-64 w-px bg-zinc-400" />
-
             {/* Data Table - Full width on mobile, constrained on desktop */}
             <div className="w-full lg:max-w-3xl">
               <DataTable />

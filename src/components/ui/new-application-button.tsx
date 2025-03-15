@@ -5,10 +5,12 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useSidebar } from './sidebar';
 import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 
 export default function NewApplicationButton() {
   const { open } = useSidebar();
   const { user } = useUser();
+  const router = useRouter();
   const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
@@ -36,6 +38,7 @@ export default function NewApplicationButton() {
 
   return (
     <button
+      onClick={() => router.push('/new-application')}
       className="flex items-center gap-2 py-2 px-3 rounded-md bg-blue-600 hover:bg-blue-700 transition-colors"
       aria-label="New Application"
     >

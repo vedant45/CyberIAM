@@ -1,27 +1,25 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import db from '@/utils/mongodb';
 
 export async function GET() {
   try {
+    // Check authentication
     const { userId } = await auth();
-    
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ hasDatabase: false });
     }
+
+    // Get user details
+    const user = await currentUser();
+    const dbName = user?.username || userId;
     
-    // Get user database status
-    const hasDatabase = await db.checkUserDatabase(userId);
+    // Check if database exists
+    const hasDatabase = await db.checkUserDatabase(dbName);
     
     return NextResponse.json({ hasDatabase });
   } catch (error) {
     console.error('Database check error:', error);
-    return NextResponse.json(
-      { error: 'Failed to check database status' },
-      { status: 500 }
-    );
+    return NextResponse.json({ hasDatabase: false });
   }
 }

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { MongoDBProvider } from "@/contexts/MongoDBContext";
-import { ClerkProvider } from "@clerk/nextjs";
+import ClerkProvider from "@/components/ClerkProvider";
 import { geistSans, geistMono } from "./fonts";
 import ClientWrapper from "@/components/ClientWrapper";
+import ClientLayout from "@/components/ClientLayout";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,23 +21,14 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <ClientWrapper>
-          <ClerkProvider appearance={{
-            elements: {
-              rootBox: "mx-auto",
-              card: "bg-zinc-800 border-zinc-700",
-              headerTitle: "text-zinc-100",
-              headerSubtitle: "text-zinc-400",
-              formButtonPrimary: "bg-zinc-700 hover:bg-zinc-600",
-              formFieldInput: "bg-zinc-900 border-zinc-700 text-zinc-100",
-              formFieldLabel: "text-zinc-400",
-              footerActionLink: "text-zinc-400 hover:text-zinc-300"
-            }
-          }}>
-            <div className="antialiased bg-background h-screen">
-              <MongoDBProvider>{children}</MongoDBProvider>
-            </div>
+          <ClerkProvider>
+            <ClientLayout>
+              <MongoDBProvider>
+                {children}
+              </MongoDBProvider>
+            </ClientLayout>
           </ClerkProvider>
         </ClientWrapper>
       </body>

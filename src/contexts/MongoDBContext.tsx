@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { useUser } from "@clerk/nextjs";
 
 interface MongoDBState {
   isConnected: boolean;
@@ -21,10 +22,12 @@ export function MongoDBProvider({ children }: { children: ReactNode }) {
     isInitialized: false,
     error: null,
   });
-
+  const {user} = useUser();
   const checkConnection = useCallback(async () => {
     try {
-      const response = await fetch('/api/mongodb');
+      const response = await fetch(
+        `/api/mongodb?db=${encodeURIComponent(user?.firstName as string)}`
+      );
       const data = await response.json();
       
       setState(prev => ({

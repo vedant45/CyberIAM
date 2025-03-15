@@ -17,8 +17,19 @@ export async function POST(request: Request) {
       if (mongoose.connection.readyState === 1) {
         await mongoose.disconnect();
       }
+      // Get user name from headers or URL params
+      const searchParams = new URL(request.url).searchParams;
+      const dbName = searchParams.get('db');
+      
+      if (!dbName) {
+        return NextResponse.json(
+          { error: 'Database name is required' },
+          { status: 400 }
+        );
+      }
+
       await mongoose.connect(process.env.MONGODB_URI, {
-        dbName: 'default'
+        dbName: dbName
       });
     }
 
