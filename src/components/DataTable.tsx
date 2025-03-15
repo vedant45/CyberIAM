@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { CsvViewerModal } from './CsvViewerModal';
 import { ErrorNotification } from './ErrorNotification';
 import { LoadingSpinner } from './ui/loading-spinner';
+import { useMongoDBContext } from '@/contexts/MongoDBContext';
 
 interface FileData {
   _id: string;
@@ -20,14 +21,14 @@ interface ErrorMessage {
 }
 
 export default function DataTable() {
+  const { isConnected, isInitialized } = useMongoDBContext();
   const [data, setData] = useState<FileData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
   const [countdown, setCountdown] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [loadingFile, setLoadingFile] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<ErrorMessage[]>([]);
   const [sortConfig, setSortConfig] = useState<{
     key: keyof FileData;
@@ -47,16 +48,15 @@ export default function DataTable() {
   }, []);
 
   const fetchData = useCallback(async () => {
+    if (!isConnected) {
+      setData([]);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const response = await fetch('/api/mongodb');
       const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch data');
-      }
-
-      setIsConnected(result.status === 'connected');
       
       // Update data while preserving pagination if possible
       const newData = result.data || [];
@@ -70,42 +70,45 @@ export default function DataTable() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch data';
       showError(message);
-      setIsConnected(false);
       setData([]);
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, showError]);
+  }, [currentPage, showError, isConnected]);
+
+  useEffect(() => {
+    if (isInitialized && isConnected) {
+      fetchData();
+    }
+  }, [isInitialized, isConnected, fetchData]);
 
   useEffect(() => {
     let isMounted = true;
+    
+    // Set up auto-refresh interval only when connected
+    if (isConnected) {
+      const intervalId = setInterval(() => {
+        if (isMounted) {
+          setCountdown(prev => {
+            if (prev <= 1) {
+              fetchData();
+              return REFRESH_INTERVAL;
+            }
+            return prev - 1;
+          });
+        }
+      }, 1000);
 
-    const refreshData = () => {
-      if (isMounted) {
-        fetchData();
-      }
-    };
-    
-    refreshData();
-    
-    // Set up auto-refresh interval
-    const intervalId = setInterval(() => {
-      if (isMounted) {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            refreshData();
-            return REFRESH_INTERVAL;
-          }
-          return prev - 1;
-        });
-      }
-    }, 1000);
+      return () => {
+        isMounted = false;
+        clearInterval(intervalId);
+      };
+    }
 
     return () => {
       isMounted = false;
-      clearInterval(intervalId);
     };
-  }, [fetchData]);
+  }, [fetchData, isConnected]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -190,6 +193,9 @@ export default function DataTable() {
       setLoadingFile(null);
     }
   };
+
+  // Don't render until MongoDB connection status is initialized
+  if (!isInitialized) return null;
 
   return (
     <div className="w-full max-w-4xl bg-zinc-900 rounded-lg p-4">

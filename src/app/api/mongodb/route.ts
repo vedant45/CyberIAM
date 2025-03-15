@@ -1,48 +1,50 @@
 import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
+import db from '@/utils/mongodb';
 
 export async function POST() {
-  try {
-    if (!process.env.MONGODB_URI) {
-      return NextResponse.json(
-        { error: 'MONGODB_URI is not defined' },
-        { status: 500 }
-      );
-    }
+  const { success, error } = await db.connect();
 
-    if (mongoose.connection.readyState === 1) {
-      // If already connected, check if it's the correct database
-      if (mongoose.connection.db.databaseName !== 'default') {
-        await mongoose.disconnect();
-        await mongoose.connect(process.env.MONGODB_URI, {
-          dbName: 'default'
-        });
-      }
-      return NextResponse.json({ status: 'connected' });
-    }
-
-    // Initial connection
-    await mongoose.connect(process.env.MONGODB_URI, {
-      dbName: 'default'
-    });
-    return NextResponse.json({ status: 'connected' });
-  } catch (error) {
+  if (!success) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to connect' },
-      { status: 500 }
+      {
+        status: 'disconnected',
+        error,
+        data: []
+      },
+      { status: 200 }  // Use 200 to avoid error logging
     );
   }
+
+  return NextResponse.json({
+    status: 'connected',
+    data: []
+  });
 }
 
 export async function GET() {
-  try {
-    if (mongoose.connection.readyState !== 1) {
-      return NextResponse.json(
-        { error: 'Database not connected' },
-        { status: 500 }
-      );
-    }
+  const state = db.getConnectionState();
 
+  if (!state.isInitialized) {
+    // First time checking connection
+    const { success, error } = await db.connect();
+    if (!success) {
+      return NextResponse.json({
+        status: 'disconnected',
+        error,
+        data: []
+      }, { status: 200 });
+    }
+  }
+
+  if (!state.isConnected) {
+    return NextResponse.json({
+      status: 'disconnected',
+      error: state.error,
+      data: []
+    }, { status: 200 });
+  }
+
+  try {
     const { File } = await import('@/models/File');
     const files = await File.find({}, {
       name: 1,
@@ -63,12 +65,13 @@ export async function GET() {
     return NextResponse.json({
       status: 'connected',
       data: filesWithUrl
-    });
+    }, { status: 200 });
   } catch (error) {
     console.error('Error fetching files:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch files' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      status: 'connected',  // Keep connection status separate from operation status
+      error: error instanceof Error ? error.message : 'Failed to fetch files',
+      data: []  // Always include empty data array on error
+    }, { status: 200 });
   }
 }

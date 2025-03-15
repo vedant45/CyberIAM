@@ -1,35 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMongoDBContext } from '@/contexts/MongoDBContext';
 
 export default function MongoDBStatus() {
-  const [isConnected, setIsConnected] = useState(false);
+  const { isConnected, error, connect, isInitialized } = useMongoDBContext();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null!);
-
-  const checkConnection = async () => {
-    try {
-      const response = await fetch('/api/mongodb');
-      const data = await response.json();
-      setIsConnected(data.status === 'connected');
-    } catch {
-      setError('Failed to check connection status');
-      setIsConnected(false);
-    }
-  };
-
-  useEffect(() => {
-    checkConnection();
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
 
   const handleMouseLeave = () => {
     if (timeoutRef.current) {
@@ -49,25 +29,15 @@ export default function MongoDBStatus() {
 
   const handleConnect = async () => {
     setIsLoading(true);
-    setError(null);
     try {
-      const response = await fetch('/api/mongodb', {
-        method: 'POST',
-      });
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to connect to MongoDB');
-      }
-      
-      setIsConnected(data.status === 'connected');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect to MongoDB');
-      setIsConnected(false);
+      await connect();
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Don't render until we've checked the connection status
+  if (!isInitialized) return null;
 
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
@@ -80,7 +50,7 @@ export default function MongoDBStatus() {
           <button
             className={`fixed right-3 h-3 w-3 rounded transition-colors ${
               isConnected ? 'bg-green-500' : 'bg-red-500'
-            } focus:outline-none`}
+            } focus:outline-none opacity-100`}
             aria-label="Database connection status"
           />
         </Popover.Trigger>
@@ -95,7 +65,7 @@ export default function MongoDBStatus() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.15, ease: "easeOut" }}
-                  style={{ 
+                  style={{
                     position: 'fixed',
                     top: '0rem',
                     right: '0rem'
