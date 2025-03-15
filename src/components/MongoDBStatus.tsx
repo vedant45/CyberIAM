@@ -1,11 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import * as Popover from '@radix-ui/react-popover';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function MongoDBStatus() {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null!);
 
   const checkConnection = async () => {
     try {
@@ -20,7 +24,28 @@ export default function MongoDBStatus() {
 
   useEffect(() => {
     checkConnection();
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, []);
+
+  const handleMouseLeave = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      setIsOpen(false);
+    }, 1000);
+  };
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setIsOpen(true);
+  };
 
   const handleConnect = async () => {
     setIsLoading(true);
@@ -45,40 +70,71 @@ export default function MongoDBStatus() {
   };
 
   return (
-    <div className="p-6 max-w-sm mx-auto bg-white rounded-xl shadow-md">
-      <div className="text-center">
-        <h2 className="text-xl font-bold mb-4">MongoDB Connection Status</h2>
-        
-        <div className="mb-4">
-          <div className="flex items-center justify-center gap-2">
-            <span className={`h-3 w-3 rounded-full ${
-              isConnected ? 'bg-green-500' : 'bg-red-500'
-            }`} />
-            <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
-          </div>
-        </div>
-
-        {error && (
-          <div className="mb-4 text-red-500 text-sm">
-            {error}
-          </div>
-        )}
-
-        {!isConnected && (
+    <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
+      <div
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={`flex items-center`}
+      >
+        <Popover.Trigger asChild>
           <button
-            onClick={handleConnect}
-            disabled={isLoading}
-            className={`
-              px-4 py-2 rounded-md text-white
-              ${isLoading 
-                ? 'bg-blue-300 cursor-not-allowed' 
-                : 'bg-blue-500 hover:bg-blue-600'}
-            `}
-          >
-            {isLoading ? 'Connecting...' : 'Connect to MongoDB'}
-          </button>
-        )}
+            className={`fixed right-3 h-3 w-3 rounded transition-colors ${
+              isConnected ? 'bg-green-500' : 'bg-red-500'
+            } focus:outline-none`}
+            aria-label="Database connection status"
+          />
+        </Popover.Trigger>
+
+        <AnimatePresence>
+          {isOpen && (
+            <Popover.Portal forceMount>
+              <Popover.Content forceMount asChild>
+                <motion.div
+                  className="w-48 rounded-lg bg-zinc-900/95 p-4 shadow-lg border-0 outline-none"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                  style={{ 
+                    position: 'fixed',
+                    top: '0rem',
+                    right: '0rem'
+                  }}
+                >
+                  <div className="space-y-4">
+                    <p className="text-sm font-medium text-zinc-100">
+                      {isConnected ? 'Connected to MongoDB' : 'Not connected'}
+                    </p>
+                    
+                    {error && (
+                      <p className="text-xs text-red-400">
+                        {error}
+                      </p>
+                    )}
+                    
+                    {isConnected ? (
+                      <button
+                        disabled
+                        className="w-full rounded-md bg-zinc-800 px-4 py-2 text-sm text-zinc-400 cursor-not-allowed outline-none border-0"
+                      >
+                        Connected!
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleConnect}
+                        disabled={isLoading}
+                        className="w-full rounded-md bg-zinc-800 px-4 py-2 text-sm text-zinc-100 hover:bg-zinc-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50 outline-none border-0"
+                      >
+                        {isLoading ? 'Connecting...' : 'Connect'}
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              </Popover.Content>
+            </Popover.Portal>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </Popover.Root>
   );
 }
