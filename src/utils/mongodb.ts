@@ -63,5 +63,21 @@ function getConnectionState(): ConnectionState {
   return { ...connection };
 }
 
-const db = { connect, disconnect, getConnectionState };
+async function checkUserDatabase(username: string) {
+  try {
+    if (!connection.isConnected) {
+      await connect();
+    }
+    
+    const adminDb = mongoose.connection.useDb('admin');
+    const dbs = await adminDb.db.admin().listDatabases();
+    return dbs.databases.some(db => db.name === username);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to check user database';
+    connection.error = errorMessage;
+    return false;
+  }
+}
+
+const db = { connect, disconnect, getConnectionState, checkUserDatabase };
 export default db;

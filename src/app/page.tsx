@@ -1,31 +1,63 @@
+'use client';
+
+import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import FileUploadSection from "@/components/FileUploadSection";
-import MongoDBStatus from "@/components/MongoDBStatus";
 import DataTable from "@/components/DataTable";
+import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 
 export default function Home() {
+  const { isLoaded } = useUser();
+
+  // Don't render anything until authentication is loaded
+  if (!isLoaded) {
+    return null;
+  }
+
   return (
-    <div className="h-screen flex flex-col">
-      {/* Sticky Navbar */}
-      <nav className="sticky top-0 w-full bg-zinc-900/50 backdrop-blur-sm h-12 flex items-center px-4 border-b border-zinc-800">
-        <MongoDBStatus />
-      </nav>
+    <>
+      <SignedIn>
+        <AuthenticatedLayout>
+          <div className="flex flex-col lg:flex-row gap-8 justify-center items-start">
+            <div className="w-full lg:w-96">
+              <FileUploadSection />
+            </div>
 
-      {/* Main Content */}
-      <main className="flex-1 p-4">
-        <div className="flex h-full gap-8 justify-center items-center">
-          <div className="w-full max-w-md">
-            <FileUploadSection />
+            {/* White Divider - Only visible on large screens */}
+            <div className="hidden lg:block h-64 w-px bg-zinc-400" />
+
+            {/* Data Table - Full width on mobile, constrained on desktop */}
+            <div className="w-full lg:max-w-3xl">
+              <DataTable />
+            </div>
           </div>
+        </AuthenticatedLayout>
+      </SignedIn>
 
-          {/* White Divider */}
-          <div className="h-64 w-px bg-zinc-400" />
-
-          {/* Data Table */}
-          <div className="w-full max-w-2xl">
-            <DataTable />
+      <SignedOut>
+        <div className="h-screen flex flex-col items-center justify-center bg-zinc-900">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-zinc-100 mb-4">
+              Welcome to File Manager
+            </h1>
+            <p className="text-zinc-400 mb-8 max-w-md mx-auto">
+              Sign in or create an account to manage your files and data securely.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <SignInButton mode="modal">
+                <button className="px-6 py-2 bg-zinc-800 text-zinc-100 rounded-md hover:bg-zinc-700 transition-colors">
+                  Sign In
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="px-6 py-2 bg-zinc-700 text-zinc-100 rounded-md hover:bg-zinc-600 transition-colors">
+                  Sign Up
+                </button>
+              </SignUpButton>
+            </div>
           </div>
         </div>
-      </main>
-    </div>
+      </SignedOut>
+    </>
   );
 }

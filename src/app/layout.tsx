@@ -1,17 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { MongoDBProvider } from "@/contexts/MongoDBContext";
+import { ClerkProvider } from "@clerk/nextjs";
+import { geistSans, geistMono } from "./fonts";
+import ClientWrapper from "@/components/ClientWrapper";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -24,13 +16,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background h-screen`}
-      >
-        <MongoDBProvider>
-          {children}
-        </MongoDBProvider>
+    <html lang="en" className={`dark ${geistSans.variable} ${geistMono.variable}`}>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
+      <body>
+        <ClientWrapper>
+          <ClerkProvider appearance={{
+            elements: {
+              rootBox: "mx-auto",
+              card: "bg-zinc-800 border-zinc-700",
+              headerTitle: "text-zinc-100",
+              headerSubtitle: "text-zinc-400",
+              formButtonPrimary: "bg-zinc-700 hover:bg-zinc-600",
+              formFieldInput: "bg-zinc-900 border-zinc-700 text-zinc-100",
+              formFieldLabel: "text-zinc-400",
+              footerActionLink: "text-zinc-400 hover:text-zinc-300"
+            }
+          }}>
+            <div className="antialiased bg-background h-screen">
+              <MongoDBProvider>{children}</MongoDBProvider>
+            </div>
+          </ClerkProvider>
+        </ClientWrapper>
       </body>
     </html>
   );
